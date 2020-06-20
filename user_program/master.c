@@ -13,6 +13,7 @@
 
 #define PAGE_SIZE 4096
 #define BUF_SIZE 512
+#define min(x, y) (x < y ? x : y)
 
 size_t get_filesize(const char* filename);  // get the size of the input file
 
@@ -44,33 +45,33 @@ int main(int argc, char* argv[]) {
   }
 
   for (int i = 0; i < num_file; ++i) {
-    int fd = open(file_name, O_RDWR);
+    int fd = open(argv[i + 2], O_RDWR);
     if (fd < 0) {
       perror("failed to open input file\n");
       return 1;
     }
-    int file_size = get_filesize(file_name);
+    int file_size = get_filesize(argv[i + 2]);
     if (file_size < 0) {
       perror("failed to get filesize\n");
       return 1;
     }
+    printf("file_size = %d\n", file_size);
     struct timeval start;
     struct timeval end;
     gettimeofday(&start, NULL);
     switch (method[0]) {
       case 'f':  // fcntl : read()/write()
-        memcpy((void*)buf, (const void*)&file_size, 4);
-        write(dev_fd, buf, 4);
+        assert(write(dev_fd, (const void*)&file_size, 4) == 4);
         int num_byte = 0;
         while (num_byte < file_size) {
-          int to_write =
-              file_size - num_byte < BUF_SIZE ? file_size - num_byte : BUF_SIZE;
+          int to_write = min(file_size - num_byte, BUF_SIZE);
           assert(read(fd, buf, to_write) == to_write);
-          write(dev_fd, buf, to_write);  // write to the the device
+          assert(write(dev_fd, buf, to_write) ==
+                 to_write);  // write to the the device
           num_byte += to_write;
         }
         break;
-      // case 'm':
+        // case 'm':
         // void* addr = mmap(NULL, );
     }
     gettimeofday(&end, NULL);

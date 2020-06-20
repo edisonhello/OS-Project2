@@ -13,6 +13,7 @@
 
 #define PAGE_SIZE 4096
 #define BUF_SIZE 512
+#define min(x, y) (x < y ? x : y)
 
 void PrintUsage() {
   fprintf(stderr, "[Usage] ./slave N file1 file2 ... fileN fcntl/mmap ip\n");
@@ -45,22 +46,23 @@ int main(int argc, char *argv[]) {
   }
 
   write(1, "ioctl success\n", 14);
+  printf("num_file = %d\n", num_file);
 
   for (int i = 0; i < num_file; ++i) {
     int fd = open(argv[i + 2], O_RDWR | O_CREAT | O_TRUNC);
+    int num_byte = 0, file_size = 0;
     struct timeval start;
     struct timeval end;
     gettimeofday(&start, NULL);
 
-    int file_size = 0;
     switch (method[0]) {
       case 'f':  // fcntl : read()/write()
-        assert(read(dev_fd, buf, 4) == 4);
-        int num_byte = *(int *)(buf);
-        while (num_byte) {
-          int to_read = num_byte < BUF_SIZE ? num_byte : BUF_SIZE;
+        assert(read(dev_fd, (void *)&num_byte, 4) == 4);
+        printf("num_byte = %d\n", num_byte);
+        while (file_size < num_byte) {
+          int to_read = min(num_byte - file_size, BUF_SIZE);
           assert(read(dev_fd, buf, to_read) == to_read);
-          write(fd, buf, to_read);
+          assert(write(fd, buf, to_read) == to_read);
           file_size += to_read;
         }
         break;
@@ -83,4 +85,3 @@ int main(int argc, char *argv[]) {
   close(dev_fd);
   return 0;
 }
-

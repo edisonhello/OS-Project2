@@ -31,7 +31,7 @@
 
 #define BUF_SIZE 512
 
-struct dentry *file1; // debug file
+struct dentry *file1;  // debug file
 
 typedef struct socket *ksocket_t;
 
@@ -42,8 +42,8 @@ extern int kconnect(ksocket_t socket, struct sockaddr *address,
 extern ssize_t krecv(ksocket_t socket, void *buffer, size_t length, int flags);
 extern int kclose(ksocket_t socket);
 extern unsigned int inet_addr(char *ip);
-extern char *
-inet_ntoa(struct in_addr *in); // DO NOT forget to kfree the return pointer
+extern char *inet_ntoa(
+    struct in_addr *in);  // DO NOT forget to kfree the return pointer
 
 static int __init slave_init(void);
 static void __exit slave_exit(void);
@@ -55,8 +55,8 @@ static long slave_ioctl(struct file *file, unsigned int ioctl_num,
 ssize_t receive_msg(struct file *filp, char *buf, size_t count, loff_t *offp);
 
 static mm_segment_t old_fs;
-static ksocket_t sockfd_cli;        // socket to the master server
-static struct sockaddr_in addr_srv; // address of the master server
+static ksocket_t sockfd_cli;         // socket to the master server
+static struct sockaddr_in addr_srv;  // address of the master server
 
 // file operations
 static struct file_operations slave_fops = {.owner = THIS_MODULE,
@@ -91,8 +91,8 @@ static void __exit slave_exit(void) {
 }
 
 int slave_close(struct inode *inode, struct file *filp) { return 0; }
-
 int slave_open(struct inode *inode, struct file *filp) { return 0; }
+
 static long slave_ioctl(struct file *file, unsigned int ioctl_num,
                         unsigned long ioctl_param) {
   long ret = -EINVAL;
@@ -115,57 +115,56 @@ static long slave_ioctl(struct file *file, unsigned int ioctl_num,
   printk("slave device ioctl");
 
   switch (ioctl_num) {
-  case slave_IOCTL_CREATESOCK: // create socket and connect to master
-    printk("slave device ioctl create socket");
+    case slave_IOCTL_CREATESOCK:  // create socket and connect to master
+      printk("slave device ioctl create socket");
 
-    if (copy_from_user(ip, (char *)ioctl_param, sizeof(ip)))
-      return -ENOMEM;
+      if (copy_from_user(ip, (char *)ioctl_param, sizeof(ip))) return -ENOMEM;
 
-    sprintf(current->comm, "ksktcli");
+      sprintf(current->comm, "ksktcli");
 
-    memset(&addr_srv, 0, sizeof(addr_srv));
-    addr_srv.sin_family = AF_INET;
-    addr_srv.sin_port = htons(2325);
-    addr_srv.sin_addr.s_addr = inet_addr(ip);
-    addr_len = sizeof(struct sockaddr_in);
+      memset(&addr_srv, 0, sizeof(addr_srv));
+      addr_srv.sin_family = AF_INET;
+      addr_srv.sin_port = htons(2325);
+      addr_srv.sin_addr.s_addr = inet_addr(ip);
+      addr_len = sizeof(struct sockaddr_in);
 
-    sockfd_cli = ksocket(AF_INET, SOCK_STREAM, 0);
-    printk("sockfd_cli = 0x%p  socket is created\n", sockfd_cli);
-    if (sockfd_cli == NULL) {
-      printk("socket failed\n");
-      return -1;
-    }
-    if (kconnect(sockfd_cli, (struct sockaddr *)&addr_srv, addr_len) < 0) {
-      printk("connect failed\n");
-      return -1;
-    }
-    tmp = inet_ntoa(&addr_srv.sin_addr);
-    printk("connected to : %s %d\n", tmp, ntohs(addr_srv.sin_port));
-    kfree(tmp);
-    printk("kfree(tmp)");
-    ret = 0;
-    break;
-  case slave_IOCTL_MMAP:
+      sockfd_cli = ksocket(AF_INET, SOCK_STREAM, 0);
+      printk("sockfd_cli = 0x%p  socket is created\n", sockfd_cli);
+      if (sockfd_cli == NULL) {
+        printk("socket failed\n");
+        return -1;
+      }
+      if (kconnect(sockfd_cli, (struct sockaddr *)&addr_srv, addr_len) < 0) {
+        printk("connect failed\n");
+        return -1;
+      }
+      tmp = inet_ntoa(&addr_srv.sin_addr);
+      printk("connected to : %s %d\n", tmp, ntohs(addr_srv.sin_port));
+      kfree(tmp);
+      printk("kfree(tmp)");
+      ret = 0;
+      break;
+    case slave_IOCTL_MMAP:
+      // remap_page_range();
+      break;
 
-    break;
-
-  case slave_IOCTL_EXIT:
-    if (kclose(sockfd_cli) == -1) {
-      printk("kclose cli error\n");
-      return -1;
-    }
-    ret = 0;
-    break;
-  default:
-    pgd = pgd_offset(current->mm, ioctl_param);
-    p4d = p4d_offset(pgd, ioctl_param);
-    pud = pud_offset(p4d, ioctl_param);
-    pmd = pmd_offset(pud, ioctl_param);
-    ptep = pte_offset_kernel(pmd, ioctl_param);
-    pte = *ptep;
-    printk("slave: %lX\n", pte);
-    ret = 0;
-    break;
+    case slave_IOCTL_EXIT:
+      if (kclose(sockfd_cli) == -1) {
+        printk("kclose cli error\n");
+        return -1;
+      }
+      ret = 0;
+      break;
+    default:
+      pgd = pgd_offset(current->mm, ioctl_param);
+      p4d = p4d_offset(pgd, ioctl_param);
+      pud = pud_offset(p4d, ioctl_param);
+      pmd = pmd_offset(pud, ioctl_param);
+      ptep = pte_offset_kernel(pmd, ioctl_param);
+      pte = *ptep;
+      printk("slave: %lX\n", pte);
+      ret = 0;
+      break;
   }
   set_fs(old_fs);
 
@@ -175,10 +174,10 @@ static long slave_ioctl(struct file *file, unsigned int ioctl_num,
 ssize_t receive_msg(struct file *filp, char *buf, size_t count, loff_t *offp) {
   // call when user is reading from this device
   char msg[BUF_SIZE];
+  printk("slave count = %d\n", count);
   size_t len;
-  len = krecv(sockfd_cli, msg, sizeof(msg), 0);
-  if (copy_to_user(buf, msg, len))
-    return -ENOMEM;
+  len = krecv(sockfd_cli, msg, count, 0);
+  if (copy_to_user(buf, msg, len)) return -ENOMEM;
   return len;
 }
 
