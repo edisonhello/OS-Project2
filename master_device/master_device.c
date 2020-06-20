@@ -1,4 +1,4 @@
-// vim: ts=2:sw=2:sts=2: 
+// vim: ts=2:sw=2:sts=2:et:
 #include <linux/debugfs.h>
 #include <linux/delay.h>
 #include <linux/errno.h>
@@ -59,7 +59,8 @@ static long master_ioctl(struct file *file, unsigned int ioctl_num,
 static ssize_t
 send_msg(struct file *file, const char __user *buf, size_t count,
          loff_t *data); // use when user is writing to this device
-static int mmmap(struct file *filp, struct vm_area_struct *vma);
+static int master_mmap(struct file *filp, struct vm_area_struct *vma);
+static void send_mmap(int count);
 
 static ksocket_t sockfd_srv,
     sockfd_cli;                     // socket for master and socket for slave
@@ -70,13 +71,16 @@ static int addr_len;
 // static  struct mmap_info *mmap_msg; // pointer to the mapped data in this
 // device
 
+static char *phys_ptr = NULL;
+static char *phys_mem = NULL;
+
 // file operations
 static struct file_operations master_fops = {.owner = THIS_MODULE,
                                              .unlocked_ioctl = master_ioctl,
                                              .open = master_open,
                                              .write = send_msg,
                                              .release = master_close, 
-																						 .mmap = mmmap};
+																						 .mmap = master_mmap};
 
 // device info
 static struct miscdevice master_dev = {
@@ -93,6 +97,9 @@ static int __init master_init(void) {
   }
 
   printk(KERN_INFO "master has been registered!\n");
+
+  phys_ptr = kmalloc(2 * PAGE_SIZE, GFP_KERNEL);
+  phys_mem = (char *)(((unsigned long)(phys_ptr) + PAGE_SIZE - 1) & PAGE_MASK);
 
   old_fs = get_fs();
   set_fs(KERNEL_DS);
@@ -132,6 +139,7 @@ static void __exit master_exit(void) {
     printk("kclose srv error\n");
     return;
   }
+  kfree(phys_ptr);
   set_fs(old_fs);
   printk(KERN_INFO "master exited!\n");
   debugfs_remove(file1);
@@ -168,7 +176,8 @@ static long master_ioctl(struct file *file, unsigned int ioctl_num,
     ret = 0;
     break;
   case master_IOCTL_MMAP:
-		// TODO
+    send_mmap(ioctl_param);
+    ret = 0;
     break;
   case master_IOCTL_EXIT:
     if (kclose(sockfd_cli) == -1) {
@@ -203,9 +212,25 @@ static ssize_t send_msg(struct file *file, const char __user *buf, size_t count,
   return count;
 }
 
-static int mmmap(struct file *filp, struct vm_area_struct *vma) {
-	// TODO
-	return 0;
+static void send_mmap(int count) {
+  printk("send_mmap count = %d\n", count);
+  ksend(sockfd_cli, phys_mem, count, 0);
+  return;
+}
+
+static inline int remap_page_range(struct vm_area_struct *vma,
+                                   unsigned long uvaddr, unsigned long paddr,
+                                   unsigned long size, pgprot_t prot) {
+  return remap_pfn_range(vma, uvaddr, paddr >> PAGE_SHIFT, size, prot);
+}
+
+static int master_mmap(struct file *filp, struct vm_area_struct *vma) {
+  printk("master mmap\n");
+  printk("master mmap from %lX\n", (unsigned long)(vma->vm_start));
+  vma->vm_flags |= VM_LOCKED;
+  remap_page_range(vma, vma->vm_start, virt_to_phys((void *)phys_mem),
+                   vma->vm_end - vma->vm_start, vma->vm_page_prot);
+  return 0;
 }
 
 module_init(master_init);

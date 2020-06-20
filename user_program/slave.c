@@ -1,4 +1,4 @@
-// vim: ts=2:sw=2:sts=2:
+// vim: ts=2:sw=2:sts=2:et:
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -72,6 +72,7 @@ int main(int argc, char *argv[]) {
         void *ptr = mmap(NULL, PAGE_SIZE, PROT_READ, MAP_SHARED, dev_fd, 0);
         if (ptr == MAP_FAILED) {
           perror("mmap");
+					return 1;
         }
         printf("after mmap\n");
         ioctl(dev_fd, 0x12345678, 4);

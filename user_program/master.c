@@ -1,4 +1,4 @@
-// vim: ts=2:sw=2:sts=2: 
+// vim: ts=2:sw=2:sts=2:et:
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -86,8 +86,8 @@ int main(int argc, char* argv[]) {
 				munmap(dfile, 4);
 
 				while (cur < file_size) {
-					int len = cur + PAGE_SIZE > file_size ? file_size - cur : PAGE_SIZE;
-					ofile = mmap(NULL, PAGE_SIZE, PROT_READ, 0, fd, cur);
+					int len = min(PAGE_SIZE, file_size - cur);
+					ofile = mmap(NULL, PAGE_SIZE, PROT_READ, MAP_SHARED, fd, cur);
 					dfile = mmap(NULL, PAGE_SIZE, PROT_WRITE, MAP_SHARED, dev_fd, 0);
 					if (ofile == (void *)-1) {
 						perror("mapping file error\n");
@@ -97,14 +97,9 @@ int main(int argc, char* argv[]) {
 						perror("mapping dev error\n");
 						return 1;
 					}
-					
-					int cur2 = 0;
-					while (len) {
-						int len2 = cur2 + BUF_SIZE > len ? len - cur2 : BUF_SIZE;
-						memcpy(dfile, ofile, len2);
-						ioctl(dev_fd, 0x12345678, ((unsigned long)cur2 << 32) | len2);
-						cur2 += len2;
-					}
+
+					memcpy(dfile, ofile, len);
+					ioctl(dev_fd, 0x12345678, len);
 
 					cur += len;
 					munmap(ofile, len);
