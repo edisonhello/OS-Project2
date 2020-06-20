@@ -1,3 +1,4 @@
+// vim: ts=2:sw=2:sts=2: 
 #include <linux/debugfs.h>
 #include <linux/delay.h>
 #include <linux/errno.h>

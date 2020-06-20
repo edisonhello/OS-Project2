@@ -1,3 +1,4 @@
+// vim: ts=2:sw=2:sts=2: 
 #include <linux/debugfs.h>
 #include <linux/delay.h>
 #include <linux/errno.h>
@@ -73,7 +74,8 @@ static struct file_operations master_fops = {.owner = THIS_MODULE,
                                              .unlocked_ioctl = master_ioctl,
                                              .open = master_open,
                                              .write = send_msg,
-                                             .release = master_close};
+                                             .release = master_close, 
+																						 .mmap = mmmap };
 
 // device info
 static struct miscdevice master_dev = {
@@ -165,6 +167,7 @@ static long master_ioctl(struct file *file, unsigned int ioctl_num,
     ret = 0;
     break;
   case master_IOCTL_MMAP:
+		// TODO
     break;
   case master_IOCTL_EXIT:
     if (kclose(sockfd_cli) == -1) {
@@ -197,6 +200,11 @@ static ssize_t send_msg(struct file *file, const char __user *buf, size_t count,
   ksend(sockfd_cli, msg, count, 0);
 
   return count;
+}
+
+static int mmmap(struct file *filp, struct vm_area_struct *vma) {
+	// TODO
+  // https://www.oreilly.com/library/view/linux-device-drivers/0596000081/ch13s02.html
 }
 
 module_init(master_init);

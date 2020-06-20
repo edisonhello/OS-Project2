@@ -1,3 +1,4 @@
+// vim: ts=2:sw=2:sts=2: 
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -39,8 +40,7 @@ int main(int argc, char *argv[]) {
     return 1;
   }
   if (ioctl(dev_fd, 0x12345677, ip) ==
-      -1)  // 0x12345677 : connect to master in the device
-  {
+      -1) { // 0x12345677 : connect to master in the device
     perror("ioclt create slave socket error\n");
     return 1;
   }
@@ -76,8 +76,7 @@ int main(int argc, char *argv[]) {
   }
 
   if (ioctl(dev_fd, 0x12345679) ==
-      -1)  // end receiving data, close the connection
-  {
+      -1) { // end receiving data, close the connection
     perror("ioclt client exits error\n");
     return 1;
   }

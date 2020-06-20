@@ -1,3 +1,4 @@
+// vim: ts=2:sw=2:sts=2: 
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -37,10 +38,9 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  if (ioctl(dev_fd, 0x12345677) == -1)  // 0x12345677 : create socket and accept
+  if (ioctl(dev_fd, 0x12345677) == -1) { // 0x12345677 : create socket and accept
                                         // the connection from the slave
-  {
-    perror("ioclt server create socket error\n");
+    perror("ioctl server create socket error\n");
     return 1;
   }
 
@@ -71,9 +71,45 @@ int main(int argc, char* argv[]) {
           num_byte += to_write;
         }
         break;
-        // case 'm':
-        // void* addr = mmap(NULL, );
-    }
+      case 'm':
+				int cur = 0;
+
+				// write file size
+				void *dfile = mmap(NULL, PAGE_SIZE, PROT_WRITE, MAP_SHARED, dev_fd, 0);
+				if (dfile == (void *)-1) {
+					perror("mapping dev error");
+					return 1;
+				}
+				memcpy(dfile, (const void*)&file_size, 4);
+				ioctl(dev_fd, 0x12345678, 4);
+				munmap(dfile, 4);
+
+				while (cur < file_size) {
+					int len = cur + PAGE_SIZE > file_size ? file_size - cur : PAGE_SIZE;
+					void *ofile = mmap(NULL, PAGE_SIZE, PROT_READ, 0, fd, cur);
+					void *dfile = mmap(NULL, PAGE_SIZE, PROT_WRITE, MAP_SHARED, dev_fd, 0);
+					if (ofile == (void *)-1) {
+						perror("mapping file error\n");
+						return 1;
+					}
+					if (dfile == (void *)-1) {
+						perror("mapping dev error\n");
+						return 1;
+					}
+					
+					int cur2 = 0;
+					while (len) {
+						int len2 = cur2 + BUF_SIZE > len ? len - cur2 : BUF_SIZE;
+						memcpy(dfile, ofile, len2);
+						ioctl(dev_fd, 0x12345678, ((unsigned long)cur2 << 32) | len2);
+						cur2 += len2;
+					}
+
+					cur += len;
+					munmap(ofile, len);
+					munmap(dfile, len);
+				}
+		}
     gettimeofday(&end, NULL);
     double trans_time = (end.tv_sec - start.tv_sec) * 1000 +
                         (end.tv_usec - start.tv_usec) * 0.0001;
