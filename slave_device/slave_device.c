@@ -156,7 +156,7 @@ static long slave_ioctl(struct file *file, unsigned int ioctl_num,
       ret = 0;
       break;
     case slave_IOCTL_MMAP:
-      receive_mmap(ioctl_param);
+      printk("slave recv: %d\n", receive_mmap(ioctl_param));
       ret = 0;
       break;
     case slave_IOCTL_EXIT:

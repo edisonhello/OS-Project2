@@ -80,9 +80,14 @@ int main(int argc, char *argv[]) {
         printf("num_byte = %d\n", num_byte);
         lseek(fd, num_byte - 1, SEEK_SET);
         write(fd, "", 1);
-        void *fptr = mmap(NULL, num_byte, PROT_WRITE, 0, fd, 0);
+        lseek(fd, 0, SEEK_SET);
+        void *fptr = mmap(NULL, num_byte, PROT_WRITE, MAP_SHARED, fd, 0);
+        if (fptr == MAP_FAILED) {
+          perror("mmap");
+          return 1;
+        }
         while (file_size < num_byte) {
-          ptr = mmap(NULL, PAGE_SIZE, PROT_READ, 0, dev_fd, 0);
+          printf("file_size = %d\n", file_size);
           int to_write = min(num_byte - file_size, PAGE_SIZE);
           ioctl(dev_fd, 0x12345678, to_write);
           memcpy(fptr, (const void *)ptr, to_write);
