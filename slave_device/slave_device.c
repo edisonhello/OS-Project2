@@ -156,8 +156,7 @@ static long slave_ioctl(struct file *file, unsigned int ioctl_num,
       ret = 0;
       break;
     case slave_IOCTL_MMAP:
-      if (copy_from_user(&count, (char *)ioctl_param, 4)) return -ENOMEM;
-      receive_mmap(count);
+      receive_mmap(*(int *)(ioctl_param));
       ret = 0;
       break;
 
