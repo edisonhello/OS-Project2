@@ -54,6 +54,7 @@ int slave_open(struct inode *inode, struct file *filp);
 static long slave_ioctl(struct file *file, unsigned int ioctl_num,
                         unsigned long ioctl_param);
 ssize_t receive_msg(struct file *filp, char *buf, size_t count, loff_t *offp);
+static int receive_mmap(int count);
 int slave_mmap(struct file *filp, struct vm_area_struct *vma);
 
 static mm_segment_t old_fs;
@@ -95,6 +96,7 @@ static int __init slave_init(void) {
 
 static void __exit slave_exit(void) {
   misc_deregister(&slave_dev);
+  kfree(phys_ptr);
   printk(KERN_INFO "slave exited!\n");
   debugfs_remove(file1);
 }
@@ -106,7 +108,7 @@ static long slave_ioctl(struct file *file, unsigned int ioctl_num,
                         unsigned long ioctl_param) {
   long ret = -EINVAL;
 
-  int addr_len;
+  int addr_len, count = 0;
   unsigned int i;
   size_t len, data_size = 0;
   char *tmp, ip[20], buf[BUF_SIZE];
@@ -154,9 +156,8 @@ static long slave_ioctl(struct file *file, unsigned int ioctl_num,
       ret = 0;
       break;
     case slave_IOCTL_MMAP:
-      printk("slave_IOCTL_MMAP\n");
-      int jizz = 7122;
-      memcpy((void *)phys_mem, (const void *)&jizz, 4);
+      if (copy_from_user(&count, (char *)ioctl_param, 4)) return -ENOMEM;
+      receive_mmap(count);
       ret = 0;
       break;
 
@@ -191,6 +192,10 @@ ssize_t receive_msg(struct file *filp, char *buf, size_t count, loff_t *offp) {
   len = krecv(sockfd_cli, msg, count, 0);
   if (copy_to_user(buf, msg, len)) return -ENOMEM;
   return len;
+}
+
+int receive_mmap(int count) {
+  return krecv(sockfd_cli, (void *)phys_mem, count, 0);
 }
 
 static inline int remap_page_range(struct vm_area_struct *vma,
