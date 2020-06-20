@@ -12,6 +12,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#define PAGE_SIZE 4096
 #define BUF_SIZE 512
 #define min(x, y) (x < y ? x : y)
 
@@ -47,8 +48,6 @@ int main(int argc, char *argv[]) {
   write(1, "ioctl success\n", 14);
   printf("num_file = %d\n", num_file);
 
-  const int kPageSize = sysconf(_SC_PAGE_SIZE);
-
   for (int i = 0; i < num_file; ++i) {
     int fd = open(argv[i + 2], O_RDWR | O_CREAT | O_TRUNC);
     int num_byte = 0, file_size = 0;
@@ -69,22 +68,28 @@ int main(int argc, char *argv[]) {
         break;
       }
       case 'm': {
-        void *ptr = mmap(NULL, kPageSize, PROT_READ, 0, dev_fd, 0);
+        printf("here\n");
+        void *ptr = mmap(NULL, PAGE_SIZE, PROT_READ, MAP_SHARED, dev_fd, 0);
+        if (ptr == MAP_FAILED) {
+          perror("mmap");
+        }
+        printf("after mmap\n");
         ioctl(dev_fd, 0x12345678, 4);
         memcpy(&num_byte, (const void *)ptr, 4);
-        munmap(ptr, kPageSize);
+        printf("num_byte = %d\n", num_byte);
         lseek(fd, num_byte - 1, SEEK_SET);
         write(fd, "", 1);
         void *fptr = mmap(NULL, num_byte, PROT_WRITE, 0, fd, 0);
         while (file_size < num_byte) {
-          ptr = mmap(NULL, kPageSize, PROT_READ, 0, dev_fd, 0);
-          int to_write = min(num_byte - file_size, kPageSize);
+          ptr = mmap(NULL, PAGE_SIZE, PROT_READ, 0, dev_fd, 0);
+          int to_write = min(num_byte - file_size, PAGE_SIZE);
           ioctl(dev_fd, 0x12345678, to_write);
           memcpy(fptr, (const void *)ptr, to_write);
-          munmap(ptr, kPageSize);
           fptr += to_write;
           file_size += to_write;
         }
+        munmap(ptr, PAGE_SIZE);
+        munmap(fptr, num_byte);
         break;
       }
     }

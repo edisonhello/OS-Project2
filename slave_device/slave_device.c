@@ -1,4 +1,4 @@
-// vim: ts=2:sw=2:sts=2: 
+// vim: ts=2:sw=2:sts=2:
 #include <linux/debugfs.h>
 #include <linux/delay.h>
 #include <linux/errno.h>
@@ -54,11 +54,14 @@ int slave_open(struct inode *inode, struct file *filp);
 static long slave_ioctl(struct file *file, unsigned int ioctl_num,
                         unsigned long ioctl_param);
 ssize_t receive_msg(struct file *filp, char *buf, size_t count, loff_t *offp);
-static int mmmap(struct file *filp, struct vm_area_struct *vma);
+int slave_mmap(struct file *filp, struct vm_area_struct *vma);
 
 static mm_segment_t old_fs;
 static ksocket_t sockfd_cli;         // socket to the master server
 static struct sockaddr_in addr_srv;  // address of the master server
+
+static char *phys_ptr = NULL;
+static char *phys_mem = NULL;
 
 // file operations
 static struct file_operations slave_fops = {.owner = THIS_MODULE,
@@ -66,7 +69,7 @@ static struct file_operations slave_fops = {.owner = THIS_MODULE,
                                             .open = slave_open,
                                             .read = receive_msg,
                                             .release = slave_close,
-																						.mmap = mmmap};
+                                            .mmap = slave_mmap};
 
 // device info
 static struct miscdevice slave_dev = {
@@ -81,6 +84,9 @@ static int __init slave_init(void) {
     printk(KERN_ERR "misc_register failed!\n");
     return ret;
   }
+
+  phys_ptr = kmalloc(2 * PAGE_SIZE, GFP_KERNEL);
+  phys_mem = (char *)(((unsigned long)(phys_ptr) + PAGE_SIZE - 1) & PAGE_MASK);
 
   printk(KERN_INFO "slave has been registered!\n");
 
@@ -148,8 +154,10 @@ static long slave_ioctl(struct file *file, unsigned int ioctl_num,
       ret = 0;
       break;
     case slave_IOCTL_MMAP:
-      // remap_page_range();
-			// TODO
+      printk("slave_IOCTL_MMAP\n");
+      int jizz = 7122;
+      memcpy((void *)phys_mem, (const void *)&jizz, 4);
+      ret = 0;
       break;
 
     case slave_IOCTL_EXIT:
@@ -178,16 +186,26 @@ static long slave_ioctl(struct file *file, unsigned int ioctl_num,
 ssize_t receive_msg(struct file *filp, char *buf, size_t count, loff_t *offp) {
   // call when user is reading from this device
   char msg[BUF_SIZE];
-  printk("slave count = %d\n", count);
+  printk("slave count = %d\n", (int)count);
   size_t len;
   len = krecv(sockfd_cli, msg, count, 0);
   if (copy_to_user(buf, msg, len)) return -ENOMEM;
   return len;
 }
 
-static int mmmap(struct file *filp, struct vm_area_struct *vma) {
-	// TODO
-	return 0;
+static inline int remap_page_range(struct vm_area_struct *vma,
+                                   unsigned long uvaddr, unsigned long paddr,
+                                   unsigned long size, pgprot_t prot) {
+  return remap_pfn_range(vma, uvaddr, paddr >> PAGE_SHIFT, size, prot);
+}
+
+int slave_mmap(struct file *filp, struct vm_area_struct *vma) {
+  printk("slave mmap\n");
+  printk("slave mmap from %lX\n", (unsigned long)(vma->vm_start));
+  vma->vm_flags |= VM_LOCKED;
+  remap_page_range(vma, vma->vm_start, virt_to_phys((void *)phys_mem),
+                   vma->vm_end - vma->vm_start, vma->vm_page_prot);
+  return 0;
 }
 
 module_init(slave_init);
