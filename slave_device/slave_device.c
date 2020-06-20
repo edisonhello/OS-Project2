@@ -1,4 +1,4 @@
-// vim: ts=2:sw=2:sts=2:
+// vim: ts=2:sw=2:sts=2:et:
 #include <linux/debugfs.h>
 #include <linux/delay.h>
 #include <linux/errno.h>
@@ -156,10 +156,9 @@ static long slave_ioctl(struct file *file, unsigned int ioctl_num,
       ret = 0;
       break;
     case slave_IOCTL_MMAP:
-      receive_mmap(*(int *)(ioctl_param));
+      receive_mmap(ioctl_param);
       ret = 0;
       break;
-
     case slave_IOCTL_EXIT:
       if (kclose(sockfd_cli) == -1) {
         printk("kclose cli error\n");
@@ -194,6 +193,7 @@ ssize_t receive_msg(struct file *filp, char *buf, size_t count, loff_t *offp) {
 }
 
 int receive_mmap(int count) {
+  printk("receive_mmap count = %d\n", count);
   return krecv(sockfd_cli, (void *)phys_mem, count, 0);
 }
 
