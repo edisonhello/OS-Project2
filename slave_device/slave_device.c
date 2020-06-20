@@ -54,6 +54,7 @@ int slave_open(struct inode *inode, struct file *filp);
 static long slave_ioctl(struct file *file, unsigned int ioctl_num,
                         unsigned long ioctl_param);
 ssize_t receive_msg(struct file *filp, char *buf, size_t count, loff_t *offp);
+static int mmmap(struct file *filp, struct vm_area_struct *vma);
 
 static mm_segment_t old_fs;
 static ksocket_t sockfd_cli;         // socket to the master server
@@ -64,7 +65,8 @@ static struct file_operations slave_fops = {.owner = THIS_MODULE,
                                             .unlocked_ioctl = slave_ioctl,
                                             .open = slave_open,
                                             .read = receive_msg,
-                                            .release = slave_close};
+                                            .release = slave_close,
+																						.mmap = mmmap};
 
 // device info
 static struct miscdevice slave_dev = {
@@ -147,6 +149,7 @@ static long slave_ioctl(struct file *file, unsigned int ioctl_num,
       break;
     case slave_IOCTL_MMAP:
       // remap_page_range();
+			// TODO
       break;
 
     case slave_IOCTL_EXIT:
@@ -180,6 +183,11 @@ ssize_t receive_msg(struct file *filp, char *buf, size_t count, loff_t *offp) {
   len = krecv(sockfd_cli, msg, count, 0);
   if (copy_to_user(buf, msg, len)) return -ENOMEM;
   return len;
+}
+
+static int mmmap(struct file *filp, struct vm_area_struct *vma) {
+	// TODO
+	return 0;
 }
 
 module_init(slave_init);

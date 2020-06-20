@@ -59,6 +59,7 @@ static long master_ioctl(struct file *file, unsigned int ioctl_num,
 static ssize_t
 send_msg(struct file *file, const char __user *buf, size_t count,
          loff_t *data); // use when user is writing to this device
+static int mmmap(struct file *filp, struct vm_area_struct *vma);
 
 static ksocket_t sockfd_srv,
     sockfd_cli;                     // socket for master and socket for slave
@@ -75,7 +76,7 @@ static struct file_operations master_fops = {.owner = THIS_MODULE,
                                              .open = master_open,
                                              .write = send_msg,
                                              .release = master_close, 
-																						 .mmap = mmmap };
+																						 .mmap = mmmap};
 
 // device info
 static struct miscdevice master_dev = {
@@ -204,7 +205,7 @@ static ssize_t send_msg(struct file *file, const char __user *buf, size_t count,
 
 static int mmmap(struct file *filp, struct vm_area_struct *vma) {
 	// TODO
-  // https://www.oreilly.com/library/view/linux-device-drivers/0596000081/ch13s02.html
+	return 0;
 }
 
 module_init(master_init);

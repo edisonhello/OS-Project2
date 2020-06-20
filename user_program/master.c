@@ -59,6 +59,9 @@ int main(int argc, char* argv[]) {
     struct timeval start;
     struct timeval end;
     gettimeofday(&start, NULL);
+
+		int cur = 0;
+		void *dfile, *ofile;
     switch (method[0]) {
       case 'f':  // fcntl : read()/write()
         assert(write(dev_fd, (const void*)&file_size, 4) == 4);
@@ -72,10 +75,8 @@ int main(int argc, char* argv[]) {
         }
         break;
       case 'm':
-				int cur = 0;
-
 				// write file size
-				void *dfile = mmap(NULL, PAGE_SIZE, PROT_WRITE, MAP_SHARED, dev_fd, 0);
+				dfile = mmap(NULL, PAGE_SIZE, PROT_WRITE, MAP_SHARED, dev_fd, 0);
 				if (dfile == (void *)-1) {
 					perror("mapping dev error");
 					return 1;
@@ -86,8 +87,8 @@ int main(int argc, char* argv[]) {
 
 				while (cur < file_size) {
 					int len = cur + PAGE_SIZE > file_size ? file_size - cur : PAGE_SIZE;
-					void *ofile = mmap(NULL, PAGE_SIZE, PROT_READ, 0, fd, cur);
-					void *dfile = mmap(NULL, PAGE_SIZE, PROT_WRITE, MAP_SHARED, dev_fd, 0);
+					ofile = mmap(NULL, PAGE_SIZE, PROT_READ, 0, fd, cur);
+					dfile = mmap(NULL, PAGE_SIZE, PROT_WRITE, MAP_SHARED, dev_fd, 0);
 					if (ofile == (void *)-1) {
 						perror("mapping file error\n");
 						return 1;

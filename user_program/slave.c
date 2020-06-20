@@ -66,6 +66,9 @@ int main(int argc, char *argv[]) {
           file_size += to_read;
         }
         break;
+			case 'm':
+				// TODO
+				break;
     }
     gettimeofday(&end, NULL);
     double trans_time = (end.tv_sec - start.tv_sec) * 1000 +
