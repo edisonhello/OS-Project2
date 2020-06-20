@@ -13,17 +13,18 @@
  * Changes for Compatibility with Linux 4.9 to use iov_iter
  *
  */
-#include "ksocket.h"
-#include <asm/processor.h>
-#include <asm/uaccess.h>
 #include <linux/in.h>
 #include <linux/module.h>
 #include <linux/net.h>
 #include <linux/socket.h>
 #include <linux/string.h>
 #include <net/sock.h>
+
+#include <asm/processor.h>
+#include <asm/uaccess.h>
 //#include "nested.h"
 //#include "sxgdebug.h"
+#include "ksocket.h"
 
 #define KSOCKET_NAME "ksocket"
 #define KSOCKET_VERSION "0.0.2"

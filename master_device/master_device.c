@@ -1,7 +1,3 @@
-#include <asm/page.h>
-#include <asm/pgtable.h>
-#include <asm/processor.h>
-#include <asm/uaccess.h>
 #include <linux/debugfs.h>
 #include <linux/delay.h>
 #include <linux/errno.h>
@@ -20,6 +16,12 @@
 #include <linux/string.h>
 #include <linux/types.h>
 #include <net/sock.h>
+
+#include <asm/page.h>
+#include <asm/pgtable.h>
+#include <asm/processor.h>
+#include <asm/uaccess.h>
+
 #ifndef VM_RESERVED
 #define VM_RESERVED (VM_DONTEXPAND | VM_DONTDUMP)
 #endif

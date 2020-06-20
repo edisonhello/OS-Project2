@@ -46,7 +46,7 @@ int kgetsockopt(ksocket_t socket, int level, int optname, void *optval,
                 int *optlen);
 
 unsigned int inet_addr(char *ip);
-char *
-inet_ntoa(struct in_addr *in); /* DO NOT forget to kfree the return pointer */
+char *inet_ntoa(
+    struct in_addr *in); /* DO NOT forget to kfree the return pointer */
 
 #endif /* !_ksocket_h_ */

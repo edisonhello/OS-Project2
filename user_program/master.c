@@ -70,8 +70,8 @@ int main(int argc, char* argv[]) {
           num_byte += to_write;
         }
         break;
-      case 'm':
-        void* addr = mmap(NULL, );
+      // case 'm':
+        // void* addr = mmap(NULL, );
     }
     gettimeofday(&end, NULL);
     double trans_time = (end.tv_sec - start.tv_sec) * 1000 +

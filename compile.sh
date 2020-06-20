@@ -1,4 +1,3 @@
-#!/bin/bash
 cd ./ksocket
 make
 insmod ksocket.ko
