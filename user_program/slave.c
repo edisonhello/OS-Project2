@@ -1,4 +1,4 @@
-// vim: ts=2:sw=2:sts=2: 
+// vim: ts=2:sw=2:sts=2:
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -12,7 +12,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#define PAGE_SIZE 4096
 #define BUF_SIZE 512
 #define min(x, y) (x < y ? x : y)
 
@@ -40,13 +39,15 @@ int main(int argc, char *argv[]) {
     return 1;
   }
   if (ioctl(dev_fd, 0x12345677, ip) ==
-      -1) { // 0x12345677 : connect to master in the device
+      -1) {  // 0x12345677 : connect to master in the device
     perror("ioclt create slave socket error\n");
     return 1;
   }
 
   write(1, "ioctl success\n", 14);
   printf("num_file = %d\n", num_file);
+
+  const int kPageSize = sysconf(_SC_PAGE_SIZE);
 
   for (int i = 0; i < num_file; ++i) {
     int fd = open(argv[i + 2], O_RDWR | O_CREAT | O_TRUNC);
@@ -56,7 +57,7 @@ int main(int argc, char *argv[]) {
     gettimeofday(&start, NULL);
 
     switch (method[0]) {
-      case 'f':  // fcntl : read()/write()
+      case 'f': {
         assert(read(dev_fd, (void *)&num_byte, 4) == 4);
         printf("num_byte = %d\n", num_byte);
         while (file_size < num_byte) {
@@ -66,9 +67,26 @@ int main(int argc, char *argv[]) {
           file_size += to_read;
         }
         break;
-			case 'm':
-				// TODO
-				break;
+      }
+      case 'm': {
+        void *ptr = mmap(NULL, kPageSize, PROT_READ, 0, dev_fd, 0);
+        ioctl(dev_fd, 0x12345678, 4);
+        memcpy(&num_byte, (const void *)ptr, 4);
+        munmap(ptr, kPageSize);
+        lseek(fd, num_byte - 1, SEEK_SET);
+        write(fd, "", 1);
+        void *fptr = mmap(NULL, num_byte, PROT_WRITE, 0, fd, 0);
+        while (file_size < num_byte) {
+          ptr = mmap(NULL, kPageSize, PROT_READ, 0, dev_fd, 0);
+          int to_write = min(num_byte - file_size, kPageSize);
+          ioctl(dev_fd, 0x12345678, to_write);
+          memcpy(fptr, (const void *)ptr, to_write);
+          munmap(ptr, kPageSize);
+          fptr += to_write;
+          file_size += to_write;
+        }
+        break;
+      }
     }
     gettimeofday(&end, NULL);
     double trans_time = (end.tv_sec - start.tv_sec) * 1000 +
@@ -79,7 +97,7 @@ int main(int argc, char *argv[]) {
   }
 
   if (ioctl(dev_fd, 0x12345679) ==
-      -1) { // end receiving data, close the connection
+      -1) {  // end receiving data, close the connection
     perror("ioclt client exits error\n");
     return 1;
   }
