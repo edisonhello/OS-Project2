@@ -60,7 +60,7 @@ static ssize_t
 send_msg(struct file *file, const char __user *buf, size_t count,
          loff_t *data); // use when user is writing to this device
 static int master_mmap(struct file *filp, struct vm_area_struct *vma);
-static void send_mmap(int count);
+static void send_mmap(size_t count);
 
 static ksocket_t sockfd_srv,
     sockfd_cli;                     // socket for master and socket for slave
@@ -212,8 +212,8 @@ static ssize_t send_msg(struct file *file, const char __user *buf, size_t count,
   return count;
 }
 
-static void send_mmap(int count) {
-  printk("send_mmap count = %d\n", count);
+static void send_mmap(size_t count) {
+  printk("send_mmap count = %zu\n", count);
   ksend(sockfd_cli, phys_mem, count, 0);
   return;
 }

@@ -50,17 +50,17 @@ int main(int argc, char *argv[]) {
 
   for (int i = 0; i < num_file; ++i) {
     int fd = open(argv[i + 2], O_RDWR | O_CREAT | O_TRUNC);
-    int num_byte = 0, file_size = 0;
     struct timeval start;
     struct timeval end;
+    size_t num_byte = 0, file_size = 0;
     gettimeofday(&start, NULL);
 
     switch (method[0]) {
       case 'f': {
-        assert(read(dev_fd, (void *)&num_byte, 4) == 4);
-        printf("num_byte = %d\n", num_byte);
+        assert(read(dev_fd, (void *)&num_byte, 8) == 8);
+        printf("num_byte = %zu\n", num_byte);
         while (file_size < num_byte) {
-          int to_read = min(num_byte - file_size, BUF_SIZE);
+          size_t to_read = min(num_byte - file_size, BUF_SIZE);
           assert(read(dev_fd, buf, to_read) == to_read);
           assert(write(fd, buf, to_read) == to_read);
           file_size += to_read;
@@ -72,37 +72,38 @@ int main(int argc, char *argv[]) {
         void *ptr = mmap(NULL, PAGE_SIZE, PROT_READ, MAP_SHARED, dev_fd, 0);
         if (ptr == MAP_FAILED) {
           perror("mmap");
-					return 1;
-        }
-        printf("after mmap\n");
-        ioctl(dev_fd, 0x12345678, 4);
-        memcpy(&num_byte, (const void *)ptr, 4);
-        printf("num_byte = %d\n", num_byte);
-        lseek(fd, num_byte - 1, SEEK_SET);
-        write(fd, "", 1);
-        lseek(fd, 0, SEEK_SET);
-        void *fptr = mmap(NULL, num_byte, PROT_WRITE, MAP_SHARED, fd, 0);
-        if (fptr == MAP_FAILED) {
-          perror("mmap");
           return 1;
         }
+        printf("after mmap\n");
+        ioctl(dev_fd, 0x12345678, 8);
+        memcpy(&num_byte, (const void *)ptr, 8);
+        printf("num_byte = %zu\n", num_byte);
+        if (num_byte > 0) {
+          lseek(fd, num_byte - 1, SEEK_SET);
+          write(fd, "", 1);
+          lseek(fd, 0, SEEK_SET);
+        }
         while (file_size < num_byte) {
-          printf("file_size = %d\n", file_size);
-          int to_write = min(num_byte - file_size, PAGE_SIZE);
+          size_t to_write = min(num_byte - file_size, PAGE_SIZE);
+          void *fptr =
+              mmap(NULL, to_write, PROT_WRITE, MAP_SHARED, fd, file_size);
+          if (fptr == MAP_FAILED) {
+            perror("mmap");
+            return 1;
+          }
           ioctl(dev_fd, 0x12345678, to_write);
           memcpy(fptr, (const void *)ptr, to_write);
-          fptr += to_write;
+          munmap(fptr, to_write);
           file_size += to_write;
         }
         munmap(ptr, PAGE_SIZE);
-        munmap(fptr, num_byte);
         break;
       }
     }
     gettimeofday(&end, NULL);
     double trans_time = (end.tv_sec - start.tv_sec) * 1000 +
                         (end.tv_usec - start.tv_usec) * 0.0001;
-    printf("Transmission time: %lf ms, File size: %d bytes\n", trans_time,
+    printf("Transmission time: %lf ms, File size: %zu bytes\n", trans_time,
            file_size / 8);
     close(fd);
   }

@@ -54,7 +54,7 @@ int slave_open(struct inode *inode, struct file *filp);
 static long slave_ioctl(struct file *file, unsigned int ioctl_num,
                         unsigned long ioctl_param);
 ssize_t receive_msg(struct file *filp, char *buf, size_t count, loff_t *offp);
-static int receive_mmap(int count);
+static size_t receive_mmap(size_t count);
 int slave_mmap(struct file *filp, struct vm_area_struct *vma);
 
 static mm_segment_t old_fs;
@@ -156,7 +156,7 @@ static long slave_ioctl(struct file *file, unsigned int ioctl_num,
       ret = 0;
       break;
     case slave_IOCTL_MMAP:
-      printk("slave recv: %d\n", receive_mmap(ioctl_param));
+      printk("slave recv: %zu\n", receive_mmap(ioctl_param));
       ret = 0;
       break;
     case slave_IOCTL_EXIT:
@@ -192,8 +192,8 @@ ssize_t receive_msg(struct file *filp, char *buf, size_t count, loff_t *offp) {
   return len;
 }
 
-int receive_mmap(int count) {
-  printk("receive_mmap count = %d\n", count);
+size_t receive_mmap(size_t count) {
+  printk("receive_mmap count = %zu\n", count);
   return krecv(sockfd_cli, (void *)phys_mem, count, 0);
 }
 
