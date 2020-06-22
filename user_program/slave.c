@@ -13,7 +13,7 @@
 #include <unistd.h>
 
 #define PAGE_SIZE 4096
-#define BUF_SIZE 512
+#define BUF_SIZE 4096
 #define min(x, y) (x < y ? x : y)
 
 void PrintUsage() {

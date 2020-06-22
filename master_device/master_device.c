@@ -31,7 +31,7 @@
 #define master_IOCTL_CREATESOCK 0x12345677
 #define master_IOCTL_MMAP 0x12345678
 #define master_IOCTL_EXIT 0x12345679
-#define BUF_SIZE 512
+#define BUF_SIZE 4096
 
 typedef struct socket *ksocket_t;
 
@@ -228,9 +228,8 @@ static int master_mmap(struct file *filp, struct vm_area_struct *vma) {
   printk("master mmap\n");
   printk("master mmap from %lX\n", (unsigned long)(vma->vm_start));
   vma->vm_flags |= VM_LOCKED;
-  remap_page_range(vma, vma->vm_start, virt_to_phys((void *)phys_mem),
-                   vma->vm_end - vma->vm_start, vma->vm_page_prot);
-  return 0;
+  return remap_page_range(vma, vma->vm_start, virt_to_phys((void *)phys_mem),
+                          vma->vm_end - vma->vm_start, vma->vm_page_prot);
 }
 
 module_init(master_init);

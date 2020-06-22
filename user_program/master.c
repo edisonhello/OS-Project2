@@ -13,7 +13,7 @@
 #include <unistd.h>
 
 #define PAGE_SIZE 4096
-#define BUF_SIZE 512
+#define BUF_SIZE 4096
 #define min(x, y) (x < y ? x : y)
 
 size_t get_filesize(const char *filename);  // get the size of the input file
@@ -80,12 +80,10 @@ int main(int argc, char *argv[]) {
         }
         memcpy(dfile, (const void *)&file_size, 8);
         ioctl(dev_fd, 0x12345678, 8);
-        munmap(dfile, PAGE_SIZE);
 
         while (cur < file_size) {
           size_t len = min(PAGE_SIZE, file_size - cur);
           ofile = mmap(NULL, PAGE_SIZE, PROT_READ, MAP_SHARED, fd, cur);
-          dfile = mmap(NULL, PAGE_SIZE, PROT_WRITE, MAP_SHARED, dev_fd, 0);
           if (ofile == MAP_FAILED) {
             perror("mapping file error\n");
             return 1;
@@ -100,8 +98,8 @@ int main(int argc, char *argv[]) {
 
           cur += len;
           munmap(ofile, PAGE_SIZE);
-          munmap(dfile, PAGE_SIZE);
         }
+        munmap(dfile, PAGE_SIZE);
     }
     gettimeofday(&end, NULL);
     double trans_time = (end.tv_sec - start.tv_sec) * 1000 +
