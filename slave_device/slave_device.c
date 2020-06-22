@@ -54,7 +54,7 @@ int slave_open(struct inode *inode, struct file *filp);
 static long slave_ioctl(struct file *file, unsigned int ioctl_num,
                         unsigned long ioctl_param);
 ssize_t receive_msg(struct file *filp, char *buf, size_t count, loff_t *offp);
-static size_t receive_mmap(size_t count);
+static int receive_mmap(size_t count);
 int slave_mmap(struct file *filp, struct vm_area_struct *vma);
 
 static mm_segment_t old_fs;
@@ -156,8 +156,7 @@ static long slave_ioctl(struct file *file, unsigned int ioctl_num,
       ret = 0;
       break;
     case slave_IOCTL_MMAP:
-      printk("slave recv: %zu\n", receive_mmap(ioctl_param));
-      ret = 0;
+      ret = receive_mmap(ioctl_param);
       break;
     case slave_IOCTL_EXIT:
       if (kclose(sockfd_cli) == -1) {
@@ -192,9 +191,19 @@ ssize_t receive_msg(struct file *filp, char *buf, size_t count, loff_t *offp) {
   return len;
 }
 
-size_t receive_mmap(size_t count) {
+int receive_mmap(size_t count) {
   printk("receive_mmap count = %zu\n", count);
-  return krecv(sockfd_cli, (void *)phys_mem, count, 0);
+  void *ptr = phys_mem;
+  while (count > 0) {
+    size_t len = krecv(sockfd_cli, ptr, count, 0);
+    if (len > count) {
+      printk("wtf?");
+      return -1;
+    }
+    count -= len;
+    ptr += len;
+  }
+  return 0;
 }
 
 static inline int remap_page_range(struct vm_area_struct *vma,
@@ -207,8 +216,11 @@ int slave_mmap(struct file *filp, struct vm_area_struct *vma) {
   printk("slave mmap\n");
   printk("slave mmap from %lX\n", (unsigned long)(vma->vm_start));
   vma->vm_flags |= VM_LOCKED;
-  remap_page_range(vma, vma->vm_start, virt_to_phys((void *)phys_mem),
-                   vma->vm_end - vma->vm_start, vma->vm_page_prot);
+  if (remap_page_range(vma, vma->vm_start, virt_to_phys((void *)phys_mem),
+                       vma->vm_end - vma->vm_start, vma->vm_page_prot) < 0) {
+    pr_err("slave: could not map the address area\n");
+    return -EIO;
+  }
   return 0;
 }
 

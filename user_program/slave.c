@@ -75,7 +75,10 @@ int main(int argc, char *argv[]) {
           return 1;
         }
         printf("after mmap\n");
-        ioctl(dev_fd, 0x12345678, 8);
+        if (ioctl(dev_fd, 0x12345678, 8) < 0) {
+          perror("ioctl");
+          return 1;
+        }
         memcpy(&num_byte, (const void *)ptr, 8);
         printf("num_byte = %zu\n", num_byte);
         if (num_byte > 0) {
@@ -91,7 +94,10 @@ int main(int argc, char *argv[]) {
             perror("mmap");
             return 1;
           }
-          ioctl(dev_fd, 0x12345678, to_write);
+          if (ioctl(dev_fd, 0x12345678, to_write) < 0) {
+            perror("ioctl");
+            return 1;
+          }
           memcpy(fptr, (const void *)ptr, to_write);
           munmap(fptr, to_write);
           file_size += to_write;

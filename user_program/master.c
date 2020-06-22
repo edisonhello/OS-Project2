@@ -79,7 +79,10 @@ int main(int argc, char *argv[]) {
           return 1;
         }
         memcpy(dfile, (const void *)&file_size, 8);
-        ioctl(dev_fd, 0x12345678, 8);
+        if (ioctl(dev_fd, 0x12345678, 8) < 0) {
+          perror("ioctl");
+          return 1;
+        }
 
         while (cur < file_size) {
           size_t len = min(PAGE_SIZE, file_size - cur);
@@ -94,7 +97,10 @@ int main(int argc, char *argv[]) {
           }
 
           memcpy(dfile, ofile, len);
-          ioctl(dev_fd, 0x12345678, len);
+          if (ioctl(dev_fd, 0x12345678, len) < 0) {
+            perror("ioctl");
+            return 1;
+          }
 
           cur += len;
           munmap(ofile, PAGE_SIZE);
