@@ -44,7 +44,8 @@ int main(int argc, char *argv[]) {
     perror("ioctl server create socket error\n");
     return 1;
   }
-
+  double total_times = 0;
+  size_t total_sizes = 0;
   for (int i = 0; i < num_file; ++i) {
     int fd = open(argv[i + 2], O_RDWR);
     if (fd < 0) {
@@ -52,7 +53,7 @@ int main(int argc, char *argv[]) {
       return 1;
     }
     size_t file_size = get_filesize(argv[i + 2]);
-    printf("file_size = %zu\n", file_size);
+//    printf("file_size = %zu\n", file_size);
     struct timeval start;
     struct timeval end;
     gettimeofday(&start, NULL);
@@ -104,10 +105,14 @@ int main(int argc, char *argv[]) {
     gettimeofday(&end, NULL);
     double trans_time = (end.tv_sec - start.tv_sec) * 1000 +
                         (end.tv_usec - start.tv_usec) * 0.0001;
-    printf("Transmission time: %lf ms, File size: %zu bytes\n", trans_time,
-           file_size / 8);
+//    printf("Transmission time: %lf ms, File size: %zu bytes\n", trans_time,
+//           file_size / 8);
+    total_times += trans_time;
+    total_sizes += file_size / 8;
     close(fd);
   }
+
+  printf("Transmission time: %lf ms, File size: %zu bytes\n", total_times, total_sizes);
 
   if (ioctl(dev_fd, 0x12345679) ==
       -1)  // end sending data, close the connection
