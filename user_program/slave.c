@@ -62,7 +62,10 @@ int main(int argc, char *argv[]) {
 //        printf("num_byte = %zu\n", num_byte);
         while (file_size < num_byte) {
           size_t to_read = min(num_byte - file_size, BUF_SIZE);
-          assert(read(dev_fd, buf, to_read) == to_read);
+          if (read(dev_fd, buf, to_read) < 0) {
+            perror("read");
+            return 1;
+          }
           assert(write(fd, buf, to_read) == to_read);
           file_size += to_read;
         }
