@@ -21,9 +21,9 @@ This is the source code of operating system project2.
 ## Usage
 
 To use it, please:
-1.change to super user
-2.execute "./compile.sh" to compile codes and install modules
-3.follow the input instrutions in the spec, 
+1.Change to super user
+2.Execute "./compile.sh" to compile codes and install modules
+3.Follow the input instrutions in the spec, 
 i.e.
 ./master 1 file1_in mmap
 ./slave 1 file1_out fcntl 127.0.0.1
@@ -36,3 +36,9 @@ it is suggested to execute "master" first to get more precise transmission time.
 
 * Demo script: under `./demo/` directory
 * Demo video: `./demo/demo.mp4`
+
+## Reproduce the plot
+
+To reproduce the plot in the report, please:
+1. Use the script in `./sample` to sample to data.
+2. Execute `print.py [sample_data_dir]` to plot.
