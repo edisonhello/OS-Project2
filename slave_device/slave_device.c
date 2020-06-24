@@ -61,8 +61,8 @@ static mm_segment_t old_fs;
 static ksocket_t sockfd_cli;         // socket to the master server
 static struct sockaddr_in addr_srv;  // address of the master server
 
-static char *phys_ptr = NULL;
-static char *phys_mem = NULL;
+static char *kernel_ptr = NULL;
+static char *kernel_mem = NULL;
 
 // file operations
 static struct file_operations slave_fops = {.owner = THIS_MODULE,
@@ -86,9 +86,6 @@ static int __init slave_init(void) {
     return ret;
   }
 
-  phys_ptr = kmalloc(2 * PAGE_SIZE, GFP_KERNEL);
-  phys_mem = (char *)(((unsigned long)(phys_ptr) + PAGE_SIZE - 1) & PAGE_MASK);
-
   printk(KERN_INFO "slave has been registered!\n");
 
   return 0;
@@ -96,7 +93,6 @@ static int __init slave_init(void) {
 
 static void __exit slave_exit(void) {
   misc_deregister(&slave_dev);
-  kfree(phys_ptr);
   printk(KERN_INFO "slave exited!\n");
   debugfs_remove(file1);
 }
@@ -153,18 +149,25 @@ static long slave_ioctl(struct file *file, unsigned int ioctl_num,
       printk("connected to : %s %d\n", tmp, ntohs(addr_srv.sin_port));
       kfree(tmp);
       printk("kfree(tmp)");
+      kernel_ptr = kmalloc(2 * PAGE_SIZE, GFP_KERNEL);
+      kernel_mem =
+          (char *)(((unsigned long)(kernel_ptr) + PAGE_SIZE - 1) & PAGE_MASK);
+
       ret = 0;
       break;
     case slave_IOCTL_MMAP:
       ret = receive_mmap(ioctl_param);
       break;
-    case slave_IOCTL_EXIT:
+    case slave_IOCTL_EXIT: {
+      printk("slave close\n");
       if (kclose(sockfd_cli) == -1) {
         printk("kclose cli error\n");
         return -1;
       }
+      if (kernel_ptr != NULL) kfree(kernel_ptr);
       ret = 0;
       break;
+    }
     default:
       pgd = pgd_offset(current->mm, ioctl_param);
       p4d = p4d_offset(pgd, ioctl_param);
@@ -184,7 +187,6 @@ static long slave_ioctl(struct file *file, unsigned int ioctl_num,
 ssize_t receive_msg(struct file *filp, char *buf, size_t count, loff_t *offp) {
   // call when user is reading from this device
   char msg[BUF_SIZE];
-  printk("slave count = %d\n", (int)count);
   size_t len;
   len = krecv(sockfd_cli, msg, count, 0);
   if (copy_to_user(buf, msg, len)) return -ENOMEM;
@@ -192,35 +194,33 @@ ssize_t receive_msg(struct file *filp, char *buf, size_t count, loff_t *offp) {
 }
 
 int receive_mmap(size_t count) {
-  printk("receive_mmap count = %zu\n", count);
-  void *ptr = phys_mem;
+  if (kernel_mem == NULL) {
+    printk("kernel_mem = NULL");
+    return 1;
+  }
+  void *ptr = kernel_mem;
   while (count > 0) {
     size_t len = krecv(sockfd_cli, ptr, count, 0);
-    if (len > count) {
-      printk("wtf?");
-      return -1;
-    }
     count -= len;
     ptr += len;
   }
   return 0;
 }
 
-static inline int remap_page_range(struct vm_area_struct *vma,
-                                   unsigned long uvaddr, unsigned long paddr,
-                                   unsigned long size, pgprot_t prot) {
-  return remap_pfn_range(vma, uvaddr, paddr >> PAGE_SHIFT, size, prot);
-}
-
 int slave_mmap(struct file *filp, struct vm_area_struct *vma) {
   printk("slave mmap\n");
   printk("slave mmap from %lX\n", (unsigned long)(vma->vm_start));
+  struct mm_struct *mm = vma->vm_mm;
   vma->vm_flags |= VM_LOCKED;
-  if (remap_page_range(vma, vma->vm_start, virt_to_phys((void *)phys_mem),
-                       vma->vm_end - vma->vm_start, vma->vm_page_prot) < 0) {
+  // down_read(&mm->mmap_sem);
+  if (remap_pfn_range(vma, vma->vm_start,
+                      virt_to_phys((void *)kernel_mem) >> PAGE_SHIFT,
+                      vma->vm_end - vma->vm_start, vma->vm_page_prot) < 0) {
+    // up_read(&mm->mmap_sem);
     pr_err("slave: could not map the address area\n");
     return -EIO;
   }
+  // up_read(&mm->mmap_sem);
   return 0;
 }
 

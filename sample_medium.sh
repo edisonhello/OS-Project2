@@ -1,3 +1,4 @@
+#!/bin/bash
 mkdir -p medium_data_$1_$2
 for i in $(seq 1 3000);
 do

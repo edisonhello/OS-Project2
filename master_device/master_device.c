@@ -71,8 +71,8 @@ static int addr_len;
 // static  struct mmap_info *mmap_msg; // pointer to the mapped data in this
 // device
 
-static char *phys_ptr = NULL;
-static char *phys_mem = NULL;
+static char *kernel_ptr = NULL;
+static char *kernel_mem = NULL;
 
 // file operations
 static struct file_operations master_fops = {.owner = THIS_MODULE,
@@ -97,9 +97,6 @@ static int __init master_init(void) {
   }
 
   printk(KERN_INFO "master has been registered!\n");
-
-  phys_ptr = kmalloc(2 * PAGE_SIZE, GFP_KERNEL);
-  phys_mem = (char *)(((unsigned long)(phys_ptr) + PAGE_SIZE - 1) & PAGE_MASK);
 
   old_fs = get_fs();
   set_fs(KERNEL_DS);
@@ -139,7 +136,7 @@ static void __exit master_exit(void) {
     printk("kclose srv error\n");
     return;
   }
-  kfree(phys_ptr);
+  kfree(kernel_ptr);
   set_fs(old_fs);
   printk(KERN_INFO "master exited!\n");
   debugfs_remove(file1);
@@ -174,6 +171,9 @@ static long master_ioctl(struct file *file, unsigned int ioctl_num,
       tmp = inet_ntoa(&addr_cli.sin_addr);
       printk("got connected from : %s %d\n", tmp, ntohs(addr_cli.sin_port));
       kfree(tmp);
+      kernel_ptr = kmalloc(2 * PAGE_SIZE, GFP_KERNEL);
+      kernel_mem =
+          (char *)(((unsigned long)(kernel_ptr) + PAGE_SIZE - 1) & PAGE_MASK);
       ret = 0;
       break;
     case master_IOCTL_MMAP:
@@ -185,6 +185,7 @@ static long master_ioctl(struct file *file, unsigned int ioctl_num,
         printk("kclose cli error\n");
         return -1;
       }
+      if (kernel_ptr != NULL) kfree(kernel_ptr);
       ret = 0;
       break;
     default:
@@ -208,19 +209,17 @@ static ssize_t send_msg(struct file *file, const char __user *buf, size_t count,
   char msg[BUF_SIZE];
   if (copy_from_user(msg, buf, count)) return -ENOMEM;
   ksend(sockfd_cli, msg, count, 0);
-
   return count;
 }
 
 static int send_mmap(size_t count) {
-  printk("send_mmap count = %zu\n", count);
-  void *ptr = phys_mem;
+  if (kernel_mem == NULL) {
+    printk("kernel_mem = NULL");
+    return 1;
+  }
+  void *ptr = kernel_mem;
   while (count > 0) {
     size_t len = ksend(sockfd_cli, ptr, count, 0);
-    if (len > count) {
-      printk("wtf?");
-      return 1;
-    }
     count -= len;
     ptr += len;
   }
@@ -236,12 +235,17 @@ static inline int remap_page_range(struct vm_area_struct *vma,
 static int master_mmap(struct file *filp, struct vm_area_struct *vma) {
   printk("master mmap\n");
   printk("master mmap from %lX\n", (unsigned long)(vma->vm_start));
+  struct mm_struct *mm = vma->vm_mm;
+  // down_write(&mm->mmap_sem);
   vma->vm_flags |= VM_LOCKED;
-  if (remap_page_range(vma, vma->vm_start, virt_to_phys((void *)phys_mem),
-                       vma->vm_end - vma->vm_start, vma->vm_page_prot) < 0) {
+  if (remap_pfn_range(vma, vma->vm_start,
+                      virt_to_phys((void *)kernel_mem) >> PAGE_SHIFT,
+                      vma->vm_end - vma->vm_start, vma->vm_page_prot) < 0) {
+    // up_write(&mm->mmap_sem);
     pr_err("master: could not map the address area\n");
     return -EIO;
   }
+  // up_write(&mm->mmap_sem);
   return 0;
 }
 
