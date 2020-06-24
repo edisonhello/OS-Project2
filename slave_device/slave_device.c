@@ -198,12 +198,7 @@ int receive_mmap(size_t count) {
     printk("kernel_mem = NULL");
     return 1;
   }
-  void *ptr = kernel_mem;
-  while (count > 0) {
-    size_t len = krecv(sockfd_cli, ptr, count, 0);
-    count -= len;
-    ptr += len;
-  }
+  krecv(sockfd_cli, kernel_mem, count, 0);
   return 0;
 }
 

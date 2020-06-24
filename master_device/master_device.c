@@ -217,19 +217,8 @@ static int send_mmap(size_t count) {
     printk("kernel_mem = NULL");
     return 1;
   }
-  void *ptr = kernel_mem;
-  while (count > 0) {
-    size_t len = ksend(sockfd_cli, ptr, count, 0);
-    count -= len;
-    ptr += len;
-  }
+  ksend(sockfd_cli, kernel_mem, count, 0);
   return 0;
-}
-
-static inline int remap_page_range(struct vm_area_struct *vma,
-                                   unsigned long uvaddr, unsigned long paddr,
-                                   unsigned long size, pgprot_t prot) {
-  return remap_pfn_range(vma, uvaddr, paddr >> PAGE_SHIFT, size, prot);
 }
 
 static int master_mmap(struct file *filp, struct vm_area_struct *vma) {
