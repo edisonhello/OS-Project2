@@ -1,3 +1,5 @@
+# 2020 Spring NTU CSIE - Operating System Project 2
+
 This is the source code of operating system project2.
 
 ./master_device : the device moudule for master server
@@ -5,6 +7,18 @@ This is the source code of operating system project2.
 ./ksocket: the device moudule including the funtions used for kernel socket
 ./user_program : the user program "master" and "slave"
 
+## Member
+
+* 資工二 b07902024 塗大為
+* 資工二 b07902131 陳冠宇
+* 資工二 b07902132 陳威翰
+* 資工二 b07902133 彭道耘
+* 資工二 b07902143 陳正康
+
+## Kernel Version
+**4.14.25**
+
+## Usage
 
 To use it, please:
 1.change to super user
@@ -18,3 +32,7 @@ Make sure that you are under the path "./user_program" when you execute user pro
 Though the execution order of user program "master" and "slave" does not matter,
 it is suggested to execute "master" first to get more precise transmission time.
 
+## Demo
+
+* Demo script: under `./demo/` directory
+* Demo video: `./demo/demo.mp4`
