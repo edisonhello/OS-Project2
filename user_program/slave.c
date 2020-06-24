@@ -78,7 +78,6 @@ int main(int argc, char *argv[]) {
           perror("mmap");
           return 1;
         }
-        printf("after mmap\n");
         if (ioctl(dev_fd, 0x12345678, 8) < 0) {
           perror("ioctl");
           return 1;
