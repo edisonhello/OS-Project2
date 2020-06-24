@@ -111,12 +111,9 @@ int main(int argc, char *argv[]) {
     }
     gettimeofday(&end, NULL);
     double trans_time = (end.tv_sec - start.tv_sec) * 1000 +
-                        (end.tv_usec - start.tv_usec) * 0.0001;
-    //    printf("Transmission time: %lf ms, File size: %zu bytes\n",
-    //    trans_time,
-    //           file_size / 8);
+                        (end.tv_usec - start.tv_usec) * 0.001;
     total_times += trans_time;
-    total_sizes += file_size / 8;
+    total_sizes += file_size;
     close(fd);
   }
 
